@@ -1,6 +1,5 @@
 from pathlib import Path
 from urllib.parse import urlparse
-from dotenv import load_dotenv
 from datetime import timedelta
 import environ
 import os
@@ -9,6 +8,9 @@ import os
 env = environ.Env(
     DEBUG=(bool, False)
 )
+
+# Load .env file
+environ.Env.read_env(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
