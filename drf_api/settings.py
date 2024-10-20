@@ -41,7 +41,9 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'dj_rest_auth',
+    'django_filters',
     'users',
+    'transactions',
 ]
 
 SITE_ID = 1
