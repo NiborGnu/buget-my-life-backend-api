@@ -5,20 +5,23 @@ from django.utils import timezone
 def handle_recurring_transactions():
     """Process recurring transactions and create new transactions 
     based on the recurrence rules."""
-    today = timezone.now()
+    today = timezone.now()  # This gets the current time as a datetime
     recurring_transactions = Transaction.objects.filter(
         recurring=True,
-        recurrence_end_date__gte=today
+        recurrence_end_date__gte=today.date()  # Keep this as date for filtering
     )
 
     for transaction in recurring_transactions:
         next_occurrence = calculate_next_occurrence(transaction)
-        
-        if next_occurrence <= today:
+
+        # Compare next_occurrence (datetime) with today (datetime)
+        if next_occurrence <= today and (transaction.last_occurrence_date is None or next_occurrence > transaction.last_occurrence_date):
             create_transaction(transaction)
             # Update the last_occurrence_date
-            transaction.last_occurrence_date = today
+            transaction.last_occurrence_date = next_occurrence
             transaction.save()
+
+
 
 def create_transaction(transaction):
     """Create a new transaction based on the recurring transaction 

@@ -1,5 +1,6 @@
 from django.db import models
 from users.models import User
+from categories.models import Category
 from django.utils import timezone
 
 class Transaction(models.Model):
@@ -7,7 +8,6 @@ class Transaction(models.Model):
     TRANSACTION_TYPES = (
         ('income', 'Income'),
         ('expense', 'Expense'),
-        ('transfer', 'Transfer'),  # Future feature
     )
 
     user = models.ForeignKey(
@@ -20,10 +20,10 @@ class Transaction(models.Model):
         max_length=10, 
         choices=TRANSACTION_TYPES
     )
-    category = models.CharField(
-        max_length=100, 
-        null=True, 
-        blank=True
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.PROTECT,
+        related_name='transactions'
     )
     description = models.TextField(
         null=True, 
@@ -35,7 +35,9 @@ class Transaction(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True
     )
-    recurring = models.BooleanField(default=False)
+    recurring = models.BooleanField(
+        default=False
+    )
     recurrence_interval = models.CharField(
         max_length=10, 
         null=True, 
@@ -53,3 +55,14 @@ class Transaction(models.Model):
     def __str__(self):
         """Return a string representation of the transaction."""
         return f"{self.transaction_type.capitalize()} - ${self.amount:.2f} on {self.created_at}"
+
+
+class TransactionComment(models.Model):
+    """Model for user-specific comments on a transaction."""
+    transaction = models.ForeignKey(Transaction, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.user.username} on {self.transaction}"
