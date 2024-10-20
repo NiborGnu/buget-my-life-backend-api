@@ -11,7 +11,7 @@ urlpatterns = [
         include('users.urls')
     ),
     path(
-        '',
+        'transactions/',
         include('transactions.urls')
     ),
     path(
