@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django_filters',
     'users',
     'transactions',
+    'categories',
 ]
 
 SITE_ID = 1
