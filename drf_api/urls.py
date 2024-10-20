@@ -7,7 +7,11 @@ urlpatterns = [
         admin.site.urls
     ),
     path(
-        '',
+        'auth/',
         include('users.urls')
+    ),
+    path(
+        '',
+        include('transactions.urls')
     ),
 ]
