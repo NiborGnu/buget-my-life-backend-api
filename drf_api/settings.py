@@ -171,5 +171,11 @@ ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # Require email verification for login
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 
-# Email backend for development
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Log emails to console for now
+# Email configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env('EMAIL_HOST')
+EMAIL_PORT = env('EMAIL_PORT')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = env('EMAIL_USE_TLS')
+DEFAULT_FROM_EMAIL = env('EMAIL_HOST_USER')
