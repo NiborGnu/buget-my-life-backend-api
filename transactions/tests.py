@@ -3,8 +3,9 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Transaction
 from .recurring import handle_recurring_transactions
+from .models import Transaction
+from categories.models import Category
 from django.utils import timezone
 from datetime import timedelta
 
@@ -14,51 +15,72 @@ class TransactionTests(APITestCase):
     """Tests for the Transaction model and its API."""
 
     def setUp(self):
-        """Create a user for testing."""
+        """Set up the test user, categories, and transaction data."""
         self.user = User.objects.create_user(
             email='testuser@example.com',
             username='testuser',
             password='testpassword'
         )
+
+        # Create categories to be used in transactions
+        self.income_category = Category.objects.create(
+            name='Salary',
+            category_type='income'
+        )
+
+        self.expense_category = Category.objects.create(
+            name='Groceries',
+            category_type='expense'
+        )
+
+        # Prepare transaction data
         self.transaction_data = {
             'amount': 100.00,
             'transaction_type': 'income',
-            'category': 'Salary',
+            'category': self.income_category.id,
             'description': 'Monthly salary',
             'recurring': True,
             'recurrence_interval': 'monthly',
             'recurrence_end_date': '2024-12-31',
         }
-        # Obtain a token for the user
+
+        # Obtain a JWT token for the test user
         self.refresh = RefreshToken.for_user(self.user)
         self.access_token = str(self.refresh.access_token)
 
-        # Add the JWT token to the client
+        # Authenticate using the token
         self.client.credentials(HTTP_AUTHORIZATION='Bearer ' + self.access_token)
 
         # Create an initial transaction
         self.transaction = Transaction.objects.create(
             user=self.user,
-            **self.transaction_data
+            amount=self.transaction_data['amount'],
+            transaction_type=self.transaction_data['transaction_type'],
+            category=self.income_category,  # Use income category for initial transaction
+            description=self.transaction_data['description'],
+            recurring=self.transaction_data['recurring'],
+            recurrence_interval=self.transaction_data['recurrence_interval'],
+            recurrence_end_date=self.transaction_data['recurrence_end_date'],
         )
+
 
     def test_create_transaction(self):
         """Test creating a new transaction."""
         response = self.client.post(
-            reverse('transactions-list'), 
-            self.transaction_data, 
+            reverse('transactions-list'),
+            self.transaction_data,
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Transaction.objects.count(), 2)  # Includes the one created in setUp
 
     def test_create_transaction_without_amount(self):
-        """Test creating a transaction without amount fails."""
+        """Test creating a transaction without a valid amount fails."""
         data = self.transaction_data.copy()
         data['amount'] = 0  # Invalid amount
         response = self.client.post(
-            reverse('transactions-list'), 
-            data, 
+            reverse('transactions-list'),
+            data,
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -76,7 +98,7 @@ class TransactionTests(APITestCase):
         updated_data = {
             'amount': 150.00,
             'transaction_type': 'expense',
-            'category': 'Food',
+            'category': self.expense_category.id,  # Ensure this is the expense category
             'description': 'Grocery shopping',
             'recurring': False,
             'recurrence_interval': None,
@@ -87,10 +109,14 @@ class TransactionTests(APITestCase):
             updated_data,
             format='json'
         )
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.transaction.refresh_from_db()
         self.assertEqual(self.transaction.amount, 150.00)
-        self.assertEqual(self.transaction.category, 'Food')
+        self.assertEqual(self.transaction.category.id, updated_data['category'])
+
+
+
 
     def test_delete_transaction(self):
         """Test deleting a transaction."""
@@ -101,26 +127,32 @@ class TransactionTests(APITestCase):
         self.assertEqual(Transaction.objects.count(), 0)
 
     def test_recurring_transaction_creation(self):
-        """Test handling of recurring transactions."""
-        # Set up a recurring transaction with a specific interval and future end date
-        transaction = Transaction.objects.create(
+        """Test the handling of recurring transactions."""
+        # Set up a new recurring transaction
+        recurring_transaction = Transaction.objects.create(
             user=self.user,
-            amount=100,
-            transaction_type='income',  # Example transaction type
-            category='Salary',  # Example category
+            amount=100.00,
+            transaction_type='income',
+            category=self.income_category,  # Ensure this is a valid income category
             description='Monthly Salary',
             recurring=True,
             recurrence_interval='monthly',
-            recurrence_end_date=timezone.now() + timedelta(days=30),  # Set end date in future
-            last_occurrence_date=None  # Initializing last_occurrence_date
+            recurrence_end_date=timezone.now() + timedelta(days=90),  # End date in 3 months
+            last_occurrence_date=timezone.now() - timedelta(days=30),  # Last occurred 30 days ago
         )
-    
-        # Call the function that processes recurring transactions
-        from .recurring import handle_recurring_transactions
+
+        # Before calling the handler, check the initial count
+        initial_count = Transaction.objects.count()
+
+        # Call the recurring transaction handler
         handle_recurring_transactions()
 
+        # Check the count of transactions after handling
+        new_count = Transaction.objects.count()
+
         # Verify that a new transaction has been created
-        self.assertEqual(Transaction.objects.count(), 2)  # 1 original + 1 new
+        self.assertEqual(new_count, initial_count + 1)  # Expecting one new transaction to be created
+
 
     def test_create_transaction_with_negative_amount(self):
         """Test creating a transaction with a negative amount fails."""
@@ -132,5 +164,4 @@ class TransactionTests(APITestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Amount must be greater than zero.", response.data['non_field_errors'])
-
+        self.assertIn("Amount must be greater than zero.", response.data['amount'])
