@@ -30,4 +30,8 @@ urlpatterns = [
         'goals/',
         include('goals.urls')
     ),
+    path(
+        'dashboards/',
+        include('dashboards.urls')
+    ),
 ]
