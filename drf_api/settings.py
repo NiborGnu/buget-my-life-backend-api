@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'categories',
     'budgets',
     'reports',
+    'goals',
 ]
 
 SITE_ID = 1

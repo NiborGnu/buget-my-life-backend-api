@@ -26,4 +26,8 @@ urlpatterns = [
         'reports/',
         include('reports.urls')
     ),
+    path(
+        'goals/',
+        include('goals.urls')
+    ),
 ]
