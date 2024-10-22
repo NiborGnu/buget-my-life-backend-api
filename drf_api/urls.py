@@ -22,4 +22,8 @@ urlpatterns = [
         'budgets/',
         include('budgets.urls')
     ),
+    path(
+        'reports/',
+        include('reports.urls')
+    ),
 ]
